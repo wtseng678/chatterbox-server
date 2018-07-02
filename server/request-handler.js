@@ -12,7 +12,10 @@ this file and include it in basic-server.js so that it actually works.
 
 **************************************************************/
 
-var requestHandler = function(request, response) {
+var url = require('url');
+var data = { results:[] };
+
+exports.requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
   // They include information about both the incoming request, such as
@@ -39,7 +42,7 @@ var requestHandler = function(request, response) {
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'text/plain';
+  headers['Content-Type'] = 'application/json';
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
@@ -52,7 +55,29 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end('Hello, World!');
+  if (url.parse(request.url).pathname === '/classes/messages') {
+    if (request.method === 'GET') {
+      var q = url.parse(request.url, true).query;
+      if (q.order && q.order.charAt(0) === '-') {
+        data.results.sort(function(a, b) { return b.createdAt - a.createdAt; });
+      }
+      response.end(JSON.stringify(data));
+    }
+    
+    if (request.method === 'POST' || request.method === 'OPTIONS') {
+      request.on('data', function(input) {
+        var d = JSON.parse(input);
+        d.objectId = getObjectId();
+        d.createdAt = new Date();
+        data.results.push(d);
+      });
+      response.writeHead(201, headers);
+      response.end(JSON.stringify(data));
+    }
+  } else {
+    response.writeHead(404, headers);
+    response.end();
+  }
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -71,3 +96,9 @@ var defaultCorsHeaders = {
   'access-control-max-age': 10 // Seconds.
 };
 
+var currentId = 1;
+var getObjectId = function() {
+  var newID = ++currentId;
+  newID = newID.toString();
+  return newID;
+};
