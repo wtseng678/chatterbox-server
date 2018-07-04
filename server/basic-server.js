@@ -2,7 +2,11 @@
 var http = require('http');
 var requests = require('./request-handler.js');
 var cluster = require('cluster');
+var express = require('express');
+var app = express();
 var numCPUs = require('os').cpus().length;
+
+
 
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
@@ -27,6 +31,8 @@ if (cluster.isMaster) {
   // we'll have it listen on the IP address 127.0.0.1, which is a
   // special address that always refers to localhost.
   var ip = '127.0.0.1';
+  
+  app.use('/static', express.static(path.join(__dirname, '../client')));
 
   var router = {
     '/classes/messages': requests.requestHandler
